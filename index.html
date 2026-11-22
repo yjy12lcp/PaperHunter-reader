@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN" data-reader="static">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>PaperHunter · 今日</title>
+  <link rel="stylesheet" href="./static/style.css">
+  <script defer src="./static/app.js"></script>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-today" viewBox="0 0 24 24"><path d="M4 5.5h16v14H4zM8 9h3v4H8zM14 9h3m-3 3h3M8 16h9"/></symbol>
+    <symbol id="i-week" viewBox="0 0 24 24"><path d="M4 4v15h16M7 14l4-5 3 2 5-6"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><path d="M5 5h3v14H5zm6 0h3v14h-3zm5 1 3-1 3 13-3 1z"/></symbol>
+    <symbol id="i-sources" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.4"/><circle cx="17" cy="6" r="2.4"/><circle cx="17" cy="18" r="2.4"/><path d="m8 11 7-4M8 13l7 4"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="m10 14 4-4M9 16l-1 1a3.5 3.5 0 0 1-5-5l5-5a3.5 3.5 0 0 1 5 0m2 1 1-1a3.5 3.5 0 0 1 5 5l-5 5a3.5 3.5 0 0 1-5 0"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 4v5h-5M4 20v-5h5m10.4-6.6a8 8 0 0 0-13-3M4.6 15.6a8 8 0 0 0 13 3"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></symbol>
+    <symbol id="i-track" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M7.6 7.6a6.2 6.2 0 0 0 0 8.8m8.8-8.8a6.2 6.2 0 0 1 0 8.8M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L9 15m1-10H5v14h14v-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M3 5h18v4H3zM5 9v11h14V9m-9 4h4"/></symbol>
+    <symbol id="i-meter" viewBox="0 0 24 24"><path d="M4 19h16M6 16v-5m6 5V5m6 11V8"/></symbol>
+  </svg>
+  <a class="skip" href="#main">跳至正文</a>
+  <header class="site-header"><div class="site-header-inner">
+    <a href="#today" class="brand" aria-label="PaperHunter 首页"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>PaperHunter</a>
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-controls="main-nav" aria-expanded="false"><span class="menu-lines" aria-hidden="true"></span>导航</button>
+    <nav id="main-nav" aria-label="主要导航">
+      <a href="#today" data-view="today"><svg class="icon"><use href="#i-today"/></svg>研究日报</a>
+      <a href="#press" data-view="press"><svg class="icon"><use href="#i-sources"/></svg>中文媒体</a>
+      <a href="#week" data-view="week"><svg class="icon"><use href="#i-week"/></svg>本周趋势</a>
+      <a href="#archive" data-view="archive"><svg class="icon"><use href="#i-archive"/></svg>收录记录</a>
+      <a href="#search" data-view="search"><svg class="icon"><use href="#i-search"/></svg>相关搜索</a>
+      <a href="#library" data-view="library"><svg class="icon"><use href="#i-library"/></svg>我的书架</a>
+      <a href="#sources" data-view="sources"><svg class="icon"><use href="#i-sources"/></svg>信息来源</a>
+      <a href="#usage" data-view="usage" hidden><svg class="icon"><use href="#i-meter"/></svg>API 用量</a>
+    </nav>
+  </div></header>
+  <main id="main" tabindex="-1">
+    <header class="masthead">
+      <div><p id="calendar" class="calendar"></p><h1 id="view-title">研究日报</h1></div>
+      <div class="mast-actions">
+        <span id="reader-mode" class="subtle" hidden>公开只读</span>
+        <button id="open-import" type="button" class="button secondary" hidden><svg class="icon"><use href="#i-link"/></svg>收录链接</button>
+        <button id="refresh" type="button" class="button secondary" hidden><svg class="icon"><use href="#i-sync"/></svg><span>刷新来源</span></button>
+        <a id="daily-edition" class="button primary" target="_blank" rel="noopener" hidden><svg class="icon"><use href="#i-today"/></svg>打开完整日报</a>
+      </div>
+    </header>
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <div id="content" aria-busy="true"><div class="empty">正在读取研究资料…</div></div>
+    <noscript>请启用 JavaScript 以阅读和搜索研究资料。</noscript>
+  </main>
+  <footer class="site-footer"><span>PaperHunter</span><span>最近成功采集 <strong id="last-sync">—</strong></span></footer>
+  <dialog id="reader" aria-labelledby="reader-title">
+    <form method="dialog" class="close-form"><button class="icon-button" aria-label="关闭详情"><svg class="icon"><use href="#i-close"/></svg></button></form>
+    <div id="reader-body"></div>
+  </dialog>
+  <dialog id="importer" aria-labelledby="import-title">
+    <form method="dialog" class="close-form"><button class="icon-button" aria-label="关闭收录窗口"><svg class="icon"><use href="#i-close"/></svg></button></form>
+    <h2 id="import-title">收录研究链接</h2>
+    <form id="import-form">
+      <label class="field">原文网址<input name="url" type="url" placeholder="https://" required></label>
+      <label class="field">标题（选填）<input name="title" type="text"></label>
+      <label class="field">我的笔记（选填）<textarea name="note" rows="3"></textarea></label>
+      <p class="form-status" role="status" id="import-status"></p>
+      <button class="button primary" type="submit">收录到资料库</button>
+    </form>
+  </dialog>
+</body>
+</html>
