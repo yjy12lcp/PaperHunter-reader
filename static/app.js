@@ -393,6 +393,11 @@ function paperCover(article) {
 
 function featuredStory(article) {
   const card = story(article, "feature-story");
+  const reason = ui.state.pick_reasons?.[article.id];
+  if (reason) card.querySelector("h3").after(node("p", "pick-reason", "推荐理由 · " + reason));
+  const revised = article.history?.some(e => e.kind === "revision" && e.date === ui.state.today);
+  const label = revised ? "今日修订" : article.first_seen === ui.state.today ? "今日收录" : "近期回顾";
+  card.prepend(metadata([[label], [article.brief ? "DeepSeek 选读卡" : "来源摘要"]]));
   card.prepend(paperCover(article));
   return card;
 }
@@ -842,8 +847,62 @@ function relatedReading(article, parent) {
   });
 }
 
+function renderBalances(parent) {
+  const section = node("section", "account-balances");
+  const header = node("div", "section-heading");
+  const grid = node("div", "balance-grid");
+  const refresh = button("刷新余额", load, "secondary", "sync");
+  refresh.title = "服务商查询结果在本机缓存 60 秒";
+  header.append(node("h2", "", "余额与额度"), refresh);
+  section.append(header, grid);
+  parent.append(section);
+
+  async function load() {
+    grid.replaceChildren();
+    refresh.disabled = true;
+    const providers = [["deepseek", "DeepSeek 可用余额"], ["x", "X 可用余额"], ["zhihu", "知乎热榜今日剩余限免额度"]];
+    await Promise.all(providers.map(async ([provider, title]) => {
+      const card = node("article", "source-row balance-card");
+      const values = node("div", "balance-values");
+      values.setAttribute("aria-live", "polite");
+      values.append(node("p", "subtle", "查询中…"));
+      card.append(node("h3", "", title), values);
+      grid.append(card);
+      try {
+        const data = await api("balance/" + provider);
+        values.replaceChildren();
+        if (data.status !== "ok") {
+          values.append(node("p", "subtle", data.message));
+          if (provider === "x") {
+            const consoleLink = external("https://console.x.com/", "X 开发者控制台");
+            values.append(consoleLink);
+          }
+          return;
+        }
+        if (provider === "zhihu") {
+          values.append(node("strong", "balance-number", data.remaining + " 次"),
+            node("p", "subtle", "每日限免 " + data.total + " 次"));
+        } else {
+          for (const row of data.balances) {
+            values.append(node("strong", "balance-number", row.currency + " " + row.total_balance),
+              node("p", "subtle", "充值 " + row.topped_up_balance + " · 赠送 " + row.granted_balance));
+          }
+          if (data.is_available === false) values.append(node("p", "source-error", "服务商提示余额不足以调用 API。"));
+        }
+        const checked = new Date(data.checked_at);
+        values.append(node("p", "subtle", "查询于 " + checked.toLocaleTimeString("zh-CN", {hour12:false})));
+      } catch {
+        values.replaceChildren(node("p", "subtle", "本机暂未读到额度，请稍后刷新。"));
+      }
+    }));
+    refresh.disabled = false;
+  }
+  load();
+}
+
 function renderUsage(parent) {
   const usage = ui.state.usage || {};
+  renderBalances(parent);
   const tabs = node("div", "tabs");
   for (const [value, title] of [["today", "今天"], ["period", typeof usage.period === "string" ? usage.period : "近 30 天"]]) {
     const b = button(title, () => { ui.usagePeriod = value; render(); }, "tab");
@@ -876,7 +935,7 @@ function renderUsage(parent) {
     }
     card.append(list); grid.append(card);
   }
-  parent.append(grid, node("p", "period usage-note", "请求数来自本机用量记录，tokens 采用服务商响应；历史未采样的用量和实际金额请查看平台账单。"));
+  parent.append(grid, node("p", "period usage-note", "请求数来自本机用量记录，tokens 采用服务商返回的数据。"));
 }
 
 function renderLibrary(parent) {
@@ -1292,6 +1351,10 @@ async function refreshSources() {
         } else if (row.warning) {
           messages.push(name + " 已收录，" + row.warning + "。");
         }
+      }
+      if (result.reading) {
+        messages.push(result.reading.message);
+        if (result.reading.error) { failed = true; messages.push(result.reading.error); }
       }
       notice(messages.join(" "), failed);
     }

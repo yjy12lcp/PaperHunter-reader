@@ -1,1 +1,5 @@
-# PaperHunter-reader
+# PaperHunter 研究阅读站
+
+[打开阅读站](https://research.yjy12lcp.cn/)
+
+这里提供公开的研究日报、精选阅读、资料库、笔记和搜索，电脑与手机都可直接阅读。采集、编辑和账户余额查询在本机工作台完成。
