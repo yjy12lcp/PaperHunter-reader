@@ -108,7 +108,8 @@ async function api(path, payload) {
       return {items: searchReading(ui.state, [], params.get("q") || "", params.get("id") || "") || []};
     }
     if (path !== "state") throw new Error("此操作需要在电脑工作台上完成。");
-    address = "./data/state.json";
+    // A phone reload just after a desktop publish should read the new Pages snapshot.
+    address = "./data/state.json?read=" + Date.now();
   }
   const options = payload === undefined ? { cache: "no-store" } : {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
