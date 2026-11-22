@@ -3,7 +3,7 @@
 const ui = {
   state: null,
   readerId: null,
-  shelf: "saved",
+  shelf: null,
   filters: {},
   drafts: new Map(),
   pending: new Set(),
@@ -158,7 +158,7 @@ function navigate() {
 function render() {
   const active = currentView();
   const readOnly = readOnlyWorkspace();
-  const title = active === "library" && readOnly ? "研究笔记" : views[active];
+  const title = views[active];
   document.title = "PaperHunter · " + title;
   byId("view-title").textContent = title;
   for (const a of document.querySelectorAll("nav a")) {
@@ -170,7 +170,6 @@ function render() {
   byId("refresh").hidden = readOnly;
   byId("reader-mode").hidden = !readOnly;
   document.querySelector('nav a[data-view="usage"]').hidden = readOnly;
-  document.querySelector('nav a[data-view="library"]').lastChild.textContent = readOnly ? "研究笔记" : "我的书架";
   const today = ui.state.today;
   const edition = byId("daily-edition");
   edition.hidden = active !== "today" || (staticReader && !ui.state.edition_dates?.includes(today));
@@ -217,9 +216,9 @@ function story(article, className) {
     [article.kind],
     [article.org],
     [article.published && "发布 " + dateLabel(article.published)],
-    [!readOnlyWorkspace() && article.saved && "已收藏"],
-    [!readOnlyWorkspace() && article.tracking && "跟踪中"],
-    [!readOnlyWorkspace() && article.read && "已读"],
+    [article.saved && "已收藏"],
+    [article.tracking && "跟踪中"],
+    [article.read && "已读"],
   ]), title);
   if (article.brief || article.summary) box.append(node("p", "summary", article.brief || article.summary));
   return box;
@@ -432,7 +431,7 @@ function renderToday(parent) {
   if (Array.isArray(ui.state.community)) renderCommunity(parent);
   renderChannels(parent);
   const follow = node("section", "following");
-  const changes = readOnlyWorkspace() ? [] : recentTrackingChanges();
+  const changes = recentTrackingChanges();
   if (changes.length) follow.append(heading("跟踪动态", changes.length + " 项"));
   changes.slice(0, 5).forEach(({ article, event }) => {
     const row = node("div", "track-row");
@@ -493,10 +492,9 @@ const communityPlatforms = {
 };
 
 function communityEmpty(source) {
-  if (readOnlyWorkspace()) return "本期暂无可展示的社区采样。";
-  if (source?.enabled === false) return "该来源已停用，可在信息来源中启用。";
-  if (source?.id === "zhihu" && source.ready === false) return "等待配置知乎密钥。在本机运行 configure-keys.cmd，下一次采集时生效。";
-  if (source?.error) return "本次采集未完成，可在信息来源中查看原因。";
+  if (source?.enabled === false) return readOnlyWorkspace() ? "该来源已停用。" : "该来源已停用，可在信息来源中启用。";
+  if (source?.id === "zhihu" && source.ready === false && !readOnlyWorkspace()) return "等待配置知乎密钥。在本机运行 configure-keys.cmd，下一次采集时生效。";
+  if (source?.error) return "最近一次采集未完成。";
   if (source?.last_success === ui.state.today) return source.id === "huggingface"
     ? "本次采集没有可展示的论文推荐。" : "本次采集没有匹配的 AI 话题。";
   return "今天尚无采样记录。";
@@ -548,6 +546,9 @@ function renderCommunity(parent) {
         details.append(node("summary", "", "其余 " + (items.length - 5) + " 项"), more);
         panel.append(details);
       }
+    } else if (key === "v2ex" && readOnlyWorkspace()) {
+      const original = external("https://www.v2ex.com/go/openai", "到 V2EX 阅读 OpenAI 节点");
+      panel.append(original);
     } else {
       panel.append(node("p", "", communityEmpty(findSource(key))));
     }
@@ -610,7 +611,7 @@ function renderChannels(parent) {
   const sources = ui.state.sources.filter(s => s.private_channel && s.enabled && Object.hasOwn(channelScopes, s.id));
   if (!sources.length) return;
   const section = node("section", "subscription-channels");
-  const header = heading(readOnlyWorkspace() ? "订阅动态" : "我的订阅渠道");
+  const header = heading("我的订阅渠道");
   const manage = node("a", "section-link", readOnlyWorkspace() ? "查看来源" : "管理订阅");
   manage.href = "#sources"; header.append(manage); section.append(header);
   const grid = node("div", "source-grid channel-grid");
@@ -730,14 +731,14 @@ function renderCatalogue(parent, key, articles) {
         list.append(group); lastDay = day;
       }
       const row = story(article, "paper-row");
-      if ((key === "notes" || (key === "library" && ui.shelf === "note")) && article.note) {
+      if (key === "library" && ui.shelf === "note" && article.note) {
         row.querySelector(".summary")?.remove();
         row.append(node("p", "summary note-preview", article.note));
       }
       list.append(row);
     }
     if (!matches.length) {
-      const hint = readOnlyWorkspace() ? "电脑工作台同步后，可在这里阅读。" : key === "library"
+      const hint = readOnlyWorkspace() ? "本机工作台发布后，可在这里阅读。" : key === "library"
         ? "打开成果详情即可收藏、跟踪或标记已读。" : "刷新来源或手动收录链接后，条目会出现在这里。";
       list.append(empty(articles.length ? "没有匹配的条目" : "这里还没有条目",
         articles.length ? "可以更换关键词或筛选条件。" : hint));
@@ -941,10 +942,7 @@ function renderUsage(parent) {
 
 function renderLibrary(parent) {
   const all = ui.state.articles;
-  if (readOnlyWorkspace()) {
-    renderCatalogue(parent, "notes", all.filter(a => a.note?.trim()));
-    return;
-  }
+  if (!ui.shelf) ui.shelf = readOnlyWorkspace() && all.some(a => a.note?.trim()) ? "note" : "saved";
   const tabs = node("div", "tabs");
   for (const [key, name] of [["saved", "已收藏"], ["tracking", "跟踪中"], ["read", "已读"], ["note", "我的笔记"]]) {
     const total = all.filter(a => a[key]).length;
@@ -1032,7 +1030,14 @@ function renderLibrarySettings(parent) {
 
 function renderSources(parent) {
   const readOnly = readOnlyWorkspace();
-  if (!readOnly) renderLibrarySettings(parent);
+  if (readOnly) {
+    const link = external(ui.state.library_url, "打开学校图书馆");
+    if (link) {
+      const institution = node("section", "institution panel");
+      institution.append(heading("学校图书馆入口"), link);
+      parent.append(institution);
+    }
+  } else renderLibrarySettings(parent);
   const groups = [
     [true, "自动采集"], [false, "手动来源"],
   ];
@@ -1059,7 +1064,9 @@ function renderSources(parent) {
       const actions = node("div", "action-line");
       const link = external(s.url, "来源主页");
       if (link) actions.append(link);
-      if (automatic && !readOnly) {
+      if (automatic && readOnly) {
+        actions.append(node("span", "subtle", s.enabled ? "已启用" : "已停用"));
+      } else if (automatic) {
         const unavailable = s.ready === false && !s.enabled;
         const waiting = s.ready === false && s.enabled;
         const b = button(waiting ? "已订阅 · 待配置" : unavailable ? "待配置" : s.enabled ? "已启用" : "已停用",
@@ -1119,8 +1126,10 @@ function renderBackground(article, body) {
     if (guide.intro) section.append(node("p", "guide-intro", guide.intro));
     section.append(list);
   } else {
-    if (readOnlyWorkspace()) return;
+    if (readOnlyWorkspace() && !guide.checked && !guide.intro) return;
+    if (guide.intro) section.append(node("p", "guide-intro", guide.intro));
     const text = guide.status === "empty" ? "本次没有找到可核对的背景资料。"
+      : readOnlyWorkspace() ? "本期未收录可打开的背景资料。"
       : guide.status === "partial" ? "部分来源暂时不可用，可重新查找。"
       : "可查找这条资料涉及的基础概念、前序工作或讲解视频。";
     section.append(node("p", "period", text));
@@ -1176,11 +1185,12 @@ function renderReader() {
     [a.topic, "topic"], [a.kind], [a.org], [a.version && "v" + a.version],
     [a.published && "发布 " + dateLabel(a.published)], [a.first_seen && "首次收录 " + dateLabel(a.first_seen)],
     [a.updated && a.updated !== a.first_seen && "收录更新 " + dateLabel(a.updated)],
+    [readOnly && a.saved && "已收藏"], [readOnly && a.tracking && "跟踪中"], [readOnly && a.read && "已读"],
   ]));
   const links = node("div", "inline-list");
   const mainLink = external(a.url, "打开原文");
   if (mainLink) links.append(mainLink);
-  if (!readOnly && ui.state.library_url) {
+  if (ui.state.library_url) {
     const library = external(ui.state.library_url, "学校图书馆");
     if (library) links.append(library);
   }
